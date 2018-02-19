@@ -10,8 +10,7 @@ export(copydata.commands)
 QMAKE_EXTRA_TARGETS += first copydata
 
 LIBS += -lglfw
-LIBS += -lGLEW
-LIBS += -lGL
+LIBS += -lGLESv2
 
 
 SOURCES += main.cpp
