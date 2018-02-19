@@ -33,6 +33,7 @@
 #define UNUSED(a) (void)a
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 
+struct nk_context ctx;
 
 struct media {
     struct nk_font *font_14;
@@ -618,8 +619,7 @@ device_shutdown(struct device *dev)
     nk_buffer_free(&dev->cmds);
 }
 
-static void
-device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
+static void device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
             struct nk_vec2 scale, enum nk_anti_aliasing AA)
 {
     GLfloat ortho[4][4] = {
@@ -654,6 +654,7 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
+#warning "Is nesesery allocate buffers each frame?"
         glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
 
@@ -688,11 +689,6 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
                 nk_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);}
         }
 
-#warning "Is nesesery call glBufferData and after that glBufferSubData?"
-
-        //        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, vertices, GL_STREAM_DRAW);
-        //        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, elements, GL_STREAM_DRAW);
-
         glBufferSubData(GL_ARRAY_BUFFER, 0, (size_t)MAX_VERTEX_MEMORY, vertices);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (size_t)MAX_ELEMENT_MEMORY, elements);
         free(vertices);
@@ -723,11 +719,63 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
 }
 
 /* glfw callbacks (I don't know if there is a easier way to access text and scroll )*/
-static void error_callback(int e, const char *d){printf("Error %d: %s\n", e, d);}
-static void text_input(GLFWwindow *win, unsigned int codepoint)
-{nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);}
+static void error_callback(int e, const char *d)
+{
+    printf("Error %d: %s\n", e, d);
+}
+
+void mouseButtonCallback(GLFWwindow* win,int button, int action, int mods)
+{
+    double x, y;
+    glfwGetCursorPos(win, &x, &y);
+    nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
+    nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
+    nk_input_button(&ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+}
+
+void cursorPosCallback(GLFWwindow* win,double xpos, double ypos)
+{
+    nk_input_motion(&ctx, (int)xpos, (int)ypos);
+}
+
+void keyCallback(GLFWwindow *win,int key, int scancode, int action, int mods)
+{
+    nk_input_key(&ctx, NK_KEY_DEL, ((key == GLFW_KEY_DELETE) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_ENTER, ((key == GLFW_KEY_ENTER) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_TAB, ((key == GLFW_KEY_TAB) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_BACKSPACE, ((key == GLFW_KEY_BACKSPACE) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_LEFT, ((key == GLFW_KEY_LEFT) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_RIGHT, ((key == GLFW_KEY_RIGHT) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_UP, ((key == GLFW_KEY_UP) && (action == GLFW_PRESS)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_DOWN, ((key == GLFW_KEY_DOWN) && (action == GLFW_PRESS)) ? 1 : 0 );
+
+
+    if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+    {
+        nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
+        nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
+        nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
+        nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
+        nk_input_key(&ctx, NK_KEY_SHIFT, 1);
+    }else
+    {
+        nk_input_key(&ctx, NK_KEY_COPY, 0);
+        nk_input_key(&ctx, NK_KEY_PASTE, 0);
+        nk_input_key(&ctx, NK_KEY_CUT, 0);
+        nk_input_key(&ctx, NK_KEY_SHIFT, 0);
+    }
+}
+
+void charCallback(GLFWwindow *win, unsigned int codepoint)
+{
+    nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);
+}
+
 static void scroll_input(GLFWwindow *win, double _, double yoff)
-{UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
+{
+    UNUSED(_);
+    nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));
+}
 
 int main(int argc, char *argv[])
 {
@@ -740,7 +788,6 @@ int main(int argc, char *argv[])
     struct device device;
     struct nk_font_atlas atlas;
     struct media media;
-    struct nk_context ctx;
 
     /* GLFW */
     glfwSetErrorCallback(error_callback);
@@ -761,7 +808,10 @@ int main(int argc, char *argv[])
     win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Demo", NULL, NULL);
     glfwMakeContextCurrent(win);
     glfwSetWindowUserPointer(win, &ctx);
-    glfwSetCharCallback(win, text_input);
+    glfwSetMouseButtonCallback(win, mouseButtonCallback);
+    glfwSetCursorPosCallback(win, cursorPosCallback);
+    glfwSetCharCallback(win, charCallback);
+    glfwSetKeyCallback(win, keyCallback);
     glfwSetScrollCallback(win, scroll_input);
     glfwGetWindowSize(win, &width, &height);
     glfwGetFramebufferSize(win, &display_width, &display_height);
@@ -772,12 +822,13 @@ int main(int argc, char *argv[])
 
     {/* GUI */
         device_init(&device);
-        {const void *image; int w, h;
+        {
+            const void *image; int w, h;
             struct nk_font_config cfg = nk_font_config(0);
             cfg.oversample_h = 3; cfg.oversample_v = 2;
-            /* Loading one font with different heights is only required if you want higher
-     * quality text otherwise you can just set the font height directly
-     * e.g.: ctx->style.font.height = 20. */
+            // Loading one font with different heights is only required if you want higher
+            // quality text otherwise you can just set the font height directly
+            // e.g.: ctx->style.font.height = 20.
             nk_font_atlas_init_default(&atlas);
             nk_font_atlas_begin(&atlas);
             media.font_14 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
@@ -786,8 +837,10 @@ int main(int argc, char *argv[])
             media.font_22 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 22.0f, &cfg);
             image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
             device_upload_atlas(&device, image, w, h);
-            nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);}
-        nk_init_default(&ctx, &media.font_14->handle);}
+            nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);
+        }
+        nk_init_default(&ctx, &media.font_14->handle);
+    }
 
     /* icons */
     glEnable(GL_TEXTURE_2D);
@@ -814,12 +867,12 @@ int main(int argc, char *argv[])
     media.menu[4] = icon_load("./data/icon/settings.png");
     media.menu[5] = icon_load("./data/icon/volume.png");
 
-    {int i;
-        for (i = 0; i < 9; ++i) {
-            char buffer[256];
-            sprintf(buffer, "./data/images/image%d.png", (i+1));
-            media.images[i] = icon_load(buffer);
-        }}
+    for (int i = 0; i < 9; ++i)
+    {
+        char buffer[256];
+        sprintf(buffer, "./data/images/image%d.png", (i+1));
+        media.images[i] = icon_load(buffer);
+    }
 
     while (!glfwWindowShouldClose(win))
     {
@@ -831,36 +884,13 @@ int main(int argc, char *argv[])
         scale.y = (float)display_height/(float)height;
 
         /* Input */
-        {double x, y;
-            nk_input_begin(&ctx);
+
+        nk_input_begin(&ctx);
+        {
             glfwPollEvents();
-            nk_input_key(&ctx, NK_KEY_DEL, glfwGetKey(win, GLFW_KEY_DELETE) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_ENTER, glfwGetKey(win, GLFW_KEY_ENTER) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_TAB, glfwGetKey(win, GLFW_KEY_TAB) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_BACKSPACE, glfwGetKey(win, GLFW_KEY_BACKSPACE) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_LEFT, glfwGetKey(win, GLFW_KEY_LEFT) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_RIGHT, glfwGetKey(win, GLFW_KEY_RIGHT) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_UP, glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS);
-            nk_input_key(&ctx, NK_KEY_DOWN, glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS);
-            if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-                    glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
-                nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
-                nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
-                nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
-                nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
-                nk_input_key(&ctx, NK_KEY_SHIFT, 1);
-            } else {
-                nk_input_key(&ctx, NK_KEY_COPY, 0);
-                nk_input_key(&ctx, NK_KEY_PASTE, 0);
-                nk_input_key(&ctx, NK_KEY_CUT, 0);
-                nk_input_key(&ctx, NK_KEY_SHIFT, 0);
-            }
-            glfwGetCursorPos(win, &x, &y);
-            nk_input_motion(&ctx, (int)x, (int)y);
-            nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
-            nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
-            nk_input_button(&ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
-            nk_input_end(&ctx);}
+        }
+        nk_input_end(&ctx);
+
 
         /* GUI */
         basic_demo(&ctx, &media);
