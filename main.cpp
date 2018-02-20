@@ -483,26 +483,21 @@ struct device {
     GLint uniform_tex;
     GLint uniform_proj;
     GLuint font_tex;
+    void *vertices;
+    void *elements;
 };
 
-static void
-die(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fputs("\n", stderr);
-    exit(EXIT_FAILURE);
-}
 
-static struct nk_image
-        icon_load(const char *filename)
+static struct nk_image icon_load(const char *filename)
 {
     int x,y,n;
     GLuint tex;
     unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
-    if (!data) die("[SDL]: failed to load image: %s", filename);
+    if (!data)
+    {
+        printf("[SDL]: failed to load image: %s", filename);
+        exit(EXIT_FAILURE);
+    }
 
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -516,8 +511,7 @@ static struct nk_image
     return nk_image_id((int)tex);
 }
 
-static void
-device_init(struct device *dev)
+static void device_init(struct device *dev)
 {
     GLint status;
     static const GLchar *vertex_shader =
@@ -580,6 +574,9 @@ device_init(struct device *dev)
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
+        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
+
         glEnableVertexAttribArray((GLuint)dev->attrib_pos);
         glEnableVertexAttribArray((GLuint)dev->attrib_uv);
         glEnableVertexAttribArray((GLuint)dev->attrib_col);
@@ -592,10 +589,13 @@ device_init(struct device *dev)
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    /* load draw vertices & elements directly into vertex + element buffer */
+    dev->vertices = malloc((size_t)MAX_VERTEX_MEMORY);
+    dev->elements = malloc((size_t)MAX_ELEMENT_MEMORY);
 }
 
-static void
-device_upload_atlas(struct device *dev, const void *image, int width, int height)
+static void device_upload_atlas(struct device *dev, const void *image, int width, int height)
 {
     glGenTextures(1, &dev->font_tex);
     glBindTexture(GL_TEXTURE_2D, dev->font_tex);
@@ -605,8 +605,7 @@ device_upload_atlas(struct device *dev, const void *image, int width, int height
                  GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
 
-static void
-device_shutdown(struct device *dev)
+static void device_shutdown(struct device *dev)
 {
     glDetachShader(dev->prog, dev->vert_shdr);
     glDetachShader(dev->prog, dev->frag_shdr);
@@ -617,10 +616,12 @@ device_shutdown(struct device *dev)
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
     nk_buffer_free(&dev->cmds);
+    free(dev->vertices);
+    free(dev->elements);
 }
 
 static void device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
-            struct nk_vec2 scale, enum nk_anti_aliasing AA)
+                        struct nk_vec2 scale, enum nk_anti_aliasing AA)
 {
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
@@ -647,20 +648,12 @@ static void device_draw(struct device *dev, struct nk_context *ctx, int width, i
     {
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
-        void *vertices, *elements;
         const nk_draw_index *offset = NULL;
 
         /* allocate vertex and element buffer */
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
-#warning "Is nesesery allocate buffers each frame?"
-        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
-
-        /* load draw vertices & elements directly into vertex + element buffer */
-        vertices = malloc((size_t)MAX_VERTEX_MEMORY);
-        elements = malloc((size_t)MAX_ELEMENT_MEMORY);
         {
             /* fill convert configuration */
             struct nk_convert_config config;
@@ -670,6 +663,7 @@ static void device_draw(struct device *dev, struct nk_context *ctx, int width, i
             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
             {NK_VERTEX_LAYOUT_END}
         };
+
             NK_MEMSET(&config, 0, sizeof(config));
             config.vertex_layout = vertex_layout;
             config.vertex_size = sizeof(struct nk_glfw_vertex);
@@ -683,16 +677,16 @@ static void device_draw(struct device *dev, struct nk_context *ctx, int width, i
             config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
-            {struct nk_buffer vbuf, ebuf;
-                nk_buffer_init_fixed(&vbuf, vertices, MAX_VERTEX_MEMORY);
-                nk_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
-                nk_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);}
+            {
+                struct nk_buffer vbuf, ebuf;
+                nk_buffer_init_fixed(&vbuf, dev->vertices, MAX_VERTEX_MEMORY);
+                nk_buffer_init_fixed(&ebuf, dev->elements, MAX_ELEMENT_MEMORY);
+                nk_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);
+            }
         }
 
-        glBufferSubData(GL_ARRAY_BUFFER, 0, (size_t)MAX_VERTEX_MEMORY, vertices);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (size_t)MAX_ELEMENT_MEMORY, elements);
-        free(vertices);
-        free(elements);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, (size_t)MAX_VERTEX_MEMORY, dev->vertices);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (size_t)MAX_ELEMENT_MEMORY, dev->elements);
 
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, ctx, &dev->cmds)
@@ -771,9 +765,8 @@ void charCallback(GLFWwindow *win, unsigned int codepoint)
     nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);
 }
 
-static void scroll_input(GLFWwindow *win, double _, double yoff)
+static void scroll_input(GLFWwindow *win, double, double yoff)
 {
-    UNUSED(_);
     nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));
 }
 
@@ -795,16 +788,12 @@ int main(int argc, char *argv[])
         fprintf(stdout, "[GFLW] failed to init!\n");
         exit(1);
     }
-    if(1){ // OPEN GL ES
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-        //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    }else{
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    }
+    // OPEN GL ES
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+
     win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Demo", NULL, NULL);
     glfwMakeContextCurrent(win);
     glfwSetWindowUserPointer(win, &ctx);
