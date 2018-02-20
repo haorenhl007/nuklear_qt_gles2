@@ -13,9 +13,11 @@ LIBS += -lglfw
 LIBS += -lGLESv2
 
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    SystemAbstraction/system_abstraction.cpp
 
 
 HEADERS += \
     SystemAbstraction/Application/libs/nuklear/nuklear.h \
-    SystemAbstraction/Application/libs/stb/stb_image.h
+    SystemAbstraction/Application/libs/stb/stb_image.h \
+    SystemAbstraction/system_abstraction.hpp

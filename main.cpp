@@ -349,8 +349,7 @@ button_demo(struct nk_context *ctx, struct media *media)
  *                          BASIC DEMO
  *
  * ===============================================================*/
-static void
-basic_demo(struct nk_context *ctx, struct media *media)
+static void basic_demo(struct nk_context *ctx, struct media *media)
 {
     static int image_active;
     static int check0 = 1;
@@ -574,6 +573,7 @@ static void device_init(struct device *dev)
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
+        //allocate buffers data
         glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
 
@@ -650,7 +650,7 @@ static void device_draw(struct device *dev, struct nk_context *ctx, int width, i
         const struct nk_draw_command *cmd;
         const nk_draw_index *offset = NULL;
 
-        /* allocate vertex and element buffer */
+        /* enable vertex and element buffer */
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
