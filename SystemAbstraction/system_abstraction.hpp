@@ -29,7 +29,7 @@ public:
         MOUSE_RIGHT_BUTTON,
 
         MOUSE_LEFT,
-        MOUSEa_ENTERED
+        MOUSE_ENTERED
     }MouseButton;
 
     typedef enum{
@@ -40,12 +40,13 @@ public:
     static void onInit(unsigned int width, unsigned int height);
     static void onPause();
     static void onResume();
-    static void onResize(unsigned int width, unsigned int height);
+    static void onFramebufferResize(unsigned int width, unsigned int height);
     static void onRenderFirstFrame();
     static void onRenderFrame();
     static void onScroll(double yoffset);
     static void onMouseButton(MouseButton mouseButton, ButtonEvent event, int x, int y);
     static void onKeyboard(ButtonEvent, int key, int x, int y );
+    static void onChar(unsigned int codepoint);
     static bool onBackKeyPressed();
     static void onJoyUpdate(float joyX, float joyY);
     static void onPointerDown(int pointerId, const struct PointerCoords *coords);

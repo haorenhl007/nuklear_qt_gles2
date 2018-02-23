@@ -6,6 +6,8 @@
 
 #include <GLES2/gl2.h>
 
+#define GLFW_INCLUDE_ES2
+#include <GLFW/glfw3.h>
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
@@ -227,7 +229,8 @@ button_demo(struct nk_context *ctx, struct media *media)
 
     nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, "Button Demo", nk_rect(50,50,255,610),
-             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
+             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+             NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  MENU
@@ -598,8 +601,7 @@ static void device_shutdown(struct device *dev)
     free(dev->elements);
 }
 
-static void device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
-                        struct nk_vec2 scale, enum nk_anti_aliasing AA)
+static void device_draw(struct device *dev, struct nk_context *ctx, int width, int height, enum nk_anti_aliasing AA)
 {
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
@@ -671,11 +673,7 @@ static void device_draw(struct device *dev, struct nk_context *ctx, int width, i
         {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
-            glScissor(
-                        (GLint)(cmd->clip_rect.x * scale.x),
-                        (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
-                        (GLint)(cmd->clip_rect.w * scale.x),
-                        (GLint)(cmd->clip_rect.h * scale.y));
+            glScissor((GLint)(cmd->clip_rect.x),(GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h))),(GLint)(cmd->clip_rect.w),(GLint)(cmd->clip_rect.h));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }
@@ -700,7 +698,7 @@ extern int window_width;
 extern int window_height;
 extern int framebuffer_width;
 extern int framebuffer_height;
-extern struct nk_vec2 scale;
+extern GLFWwindow *win;
 
 void SystemAbstraction::onInit(unsigned int width, unsigned int height)
 {
@@ -775,7 +773,7 @@ void SystemAbstraction::onResume()
 
 }
 
-void SystemAbstraction::onResize(unsigned int width, unsigned int height)
+void SystemAbstraction::onFramebufferResize(unsigned int width, unsigned int height)
 {
 
 }
@@ -787,6 +785,8 @@ void SystemAbstraction::onRenderFirstFrame()
 
 void SystemAbstraction::onRenderFrame()
 {
+    nk_input_end(&ctx);
+
     /* GUI */
     basic_demo(&ctx, &media);
     button_demo(&ctx, &media);
@@ -796,22 +796,31 @@ void SystemAbstraction::onRenderFrame()
     glViewport(0, 0, framebuffer_width, framebuffer_height);
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-    device_draw(&device, &ctx, window_width, window_height, scale, NK_ANTI_ALIASING_ON);
+    device_draw(&device, &ctx, window_width, window_height, NK_ANTI_ALIASING_ON);
+
+    nk_input_begin(&ctx);
 }
 
 void SystemAbstraction::onScroll(double yoffset)
 {
-
+    nk_input_scroll(&ctx, nk_vec2(0, (float)yoffset));
 }
 
 void SystemAbstraction::onMouseButton(MouseButton mouseButton, ButtonEvent event, int x, int y)
 {
-
+    nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, ((mouseButton == MOUSE_LEFT_BUTTON) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, ((mouseButton == MOUSE_MIDDLE_BUTTON) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_button(&ctx, NK_BUTTON_RIGHT, (int)x, (int)y, ((mouseButton == MOUSE_RIGHT_BUTTON) && (event == EVENT_DOWN)) ? 1 : 0 );
 }
 
 void SystemAbstraction::onKeyboard(ButtonEvent event,int key, int x, int y )
 {
 
+}
+
+void SystemAbstraction::onChar(unsigned int codepoint)
+{
+    nk_input_unicode(&ctx, codepoint);
 }
 
 bool SystemAbstraction::onBackKeyPressed()
@@ -836,7 +845,7 @@ void SystemAbstraction::onPointerUp(int pointerId, const struct PointerCoords *c
 
 void SystemAbstraction::onPointerMove(int pointerId, const struct PointerCoords *coords)
 {
-
+    nk_input_motion(&ctx, (int)coords->x, (int)coords->y);
 }
 
 void SystemAbstraction::onTimerTick()

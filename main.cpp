@@ -1,17 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-#include <math.h>
-#include <time.h>
-#include <limits.h>
 
 #define GLFW_INCLUDE_ES2
 #include <GLFW/glfw3.h>
-
 
 #include "./SystemAbstraction/system_abstraction.hpp"
 
@@ -19,8 +10,14 @@
 #define WINDOW_HEIGHT 800
 
 extern struct nk_context ctx;
+GLFWwindow *win;
+int window_width = 0;
+int window_height = 0;
+int framebuffer_width=0;
+int framebuffer_height=0;
+struct nk_vec2 scale;
 
-/* glfw callbacks (I don't know if there is a easier way to access text and scroll )*/
+
 static void error_callback(int e, const char *d)
 {
     printf("Error %d: %s\n", e, d);
@@ -30,18 +27,54 @@ void mouseButtonCallback(GLFWwindow* win,int button, int action, int mods)
 {
     double x, y;
     glfwGetCursorPos(win, &x, &y);
-    nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
-    nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
-    nk_input_button(&ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+
+    x = x*scale.x;
+    y = y*scale.y;
+
+    if(action == GLFW_PRESS)
+    {
+        if(button == GLFW_MOUSE_BUTTON_LEFT)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_LEFT_BUTTON, SystemAbstraction::EVENT_DOWN, x, y);
+        }
+        else if(button == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_MIDDLE_BUTTON, SystemAbstraction::EVENT_DOWN, x, y);
+        }
+        else if(button == GLFW_MOUSE_BUTTON_RIGHT)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_RIGHT_BUTTON, SystemAbstraction::EVENT_DOWN, x, y);
+        }
+    }
+    else if(action == GLFW_RELEASE)
+    {
+        if(button == GLFW_MOUSE_BUTTON_LEFT)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_LEFT_BUTTON, SystemAbstraction::EVENT_UP, x, y);
+        }
+        else if(button == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_MIDDLE_BUTTON, SystemAbstraction::EVENT_UP, x, y);
+        }
+        else if(button == GLFW_MOUSE_BUTTON_RIGHT)
+        {
+               SystemAbstraction::onMouseButton(SystemAbstraction::MOUSE_RIGHT_BUTTON, SystemAbstraction::EVENT_UP, x, y);
+        }
+    }
 }
 
 void cursorPosCallback(GLFWwindow* win,double xpos, double ypos)
 {
-    nk_input_motion(&ctx, (int)xpos, (int)ypos);
+    PointerCoords coords;
+    coords.x = xpos*scale.x;
+    coords.y = ypos*scale.y;
+    SystemAbstraction::onPointerMove(0, &coords);
 }
 
 void keyCallback(GLFWwindow *win,int key, int scancode, int action, int mods)
 {
+
+
     nk_input_key(&ctx, NK_KEY_DEL, ((key == GLFW_KEY_DELETE) && (action == GLFW_PRESS)) ? 1 : 0 );
     nk_input_key(&ctx, NK_KEY_ENTER, ((key == GLFW_KEY_ENTER) && (action == GLFW_PRESS)) ? 1 : 0 );
     nk_input_key(&ctx, NK_KEY_TAB, ((key == GLFW_KEY_TAB) && (action == GLFW_PRESS)) ? 1 : 0 );
@@ -52,44 +85,48 @@ void keyCallback(GLFWwindow *win,int key, int scancode, int action, int mods)
     nk_input_key(&ctx, NK_KEY_DOWN, ((key == GLFW_KEY_DOWN) && (action == GLFW_PRESS)) ? 1 : 0 );
 
 
-    if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+    if (mods & GLFW_MOD_CONTROL)
     {
-        nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
-        nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
-        nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
-        nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS);
+        nk_input_key(&ctx, NK_KEY_COPY, ((key == GLFW_KEY_C) && (action == GLFW_PRESS)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_PASTE, ((key == GLFW_KEY_V) && (action == GLFW_PRESS)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_CUT, ((key == GLFW_KEY_X) && (action == GLFW_PRESS)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_CUT, ((key == GLFW_KEY_E) && (action == GLFW_PRESS)) ? 1 : 0 );
         nk_input_key(&ctx, NK_KEY_SHIFT, 1);
-    }else
+    }
+    else
     {
         nk_input_key(&ctx, NK_KEY_COPY, 0);
         nk_input_key(&ctx, NK_KEY_PASTE, 0);
         nk_input_key(&ctx, NK_KEY_CUT, 0);
         nk_input_key(&ctx, NK_KEY_SHIFT, 0);
     }
+
 }
 
 void charCallback(GLFWwindow *win, unsigned int codepoint)
 {
-    nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);
+    SystemAbstraction::onChar(codepoint);
 }
 
-static void scroll_input(GLFWwindow *win, double, double yoff)
+static void scrollCallback(GLFWwindow *win, double, double yoff)
 {
-    nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));
+    yoff = yoff*scale.y;
+    SystemAbstraction::onScroll(yoff);
 }
 
-static GLFWwindow *win;
-int window_width = 0;
-int window_height = 0;
-int framebuffer_width=0;
-int framebuffer_height=0;
-struct nk_vec2 scale;
+static void framebufferSizeCallback(GLFWwindow* win,int width,int height)
+{
+    width = width*scale.x;
+    height = height*scale.y;
+    SystemAbstraction::onFramebufferResize(width, height);
+}
 
 int main(int argc, char *argv[])
 {
     /* GLFW */
     glfwSetErrorCallback(error_callback);
-    if (!glfwInit()) {
+    if (!glfwInit())
+    {
         fprintf(stdout, "[GFLW] failed to init!\n");
         exit(1);
     }
@@ -98,46 +135,33 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-
     win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Demo", NULL, NULL);
     glfwMakeContextCurrent(win);
-    glfwSetWindowUserPointer(win, &ctx);
+
     glfwSetMouseButtonCallback(win, mouseButtonCallback);
     glfwSetCursorPosCallback(win, cursorPosCallback);
     glfwSetCharCallback(win, charCallback);
     glfwSetKeyCallback(win, keyCallback);
-    glfwSetScrollCallback(win, scroll_input);
+    glfwSetScrollCallback(win, scrollCallback);
+    glfwSetFramebufferSizeCallback(win, framebufferSizeCallback);
+
     glfwGetWindowSize(win, &window_width, &window_height);
     glfwGetFramebufferSize(win, &framebuffer_width, &framebuffer_height);
 
+    scale.x = (float)framebuffer_width/(float)window_width;
+    scale.y = (float)framebuffer_height/(float)window_height;
 
-    SystemAbstraction::onInit(window_width, window_height);
-
+    SystemAbstraction::onInit(framebuffer_width, framebuffer_height);
 
     while (!glfwWindowShouldClose(win))
     {
-        /* High DPI displays */
-        glfwGetWindowSize(win, &window_width, &window_height);
-        glfwGetFramebufferSize(win, &framebuffer_width, &framebuffer_height);
-        scale.x = (float)framebuffer_width/(float)window_width;
-        scale.y = (float)framebuffer_height/(float)window_height;
-
-        /* Input */
-
-        nk_input_begin(&ctx);
-        {
-            glfwPollEvents();
-        }
-        nk_input_end(&ctx);
-
+        glfwPollEvents();
         SystemAbstraction::onRenderFrame();
-
         glfwSwapBuffers(win);
     }
 
+    //DELETE
     SystemAbstraction::onUninit();
-
-
     glfwTerminate();
     return 0;
 }
