@@ -6,9 +6,6 @@
 
 #include <GLES2/gl2.h>
 
-#define GLFW_INCLUDE_ES2
-#include <GLFW/glfw3.h>
-
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
@@ -694,11 +691,9 @@ struct nk_font_atlas atlas;
 struct media media;
 struct nk_context ctx;
 
-extern int window_width;
-extern int window_height;
+
 extern int framebuffer_width;
 extern int framebuffer_height;
-extern GLFWwindow *win;
 
 void SystemAbstraction::onInit(unsigned int width, unsigned int height)
 {
@@ -796,7 +791,7 @@ void SystemAbstraction::onRenderFrame()
     glViewport(0, 0, framebuffer_width, framebuffer_height);
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-    device_draw(&device, &ctx, window_width, window_height, NK_ANTI_ALIASING_ON);
+    device_draw(&device, &ctx, framebuffer_width, framebuffer_height, NK_ANTI_ALIASING_ON);
 
     nk_input_begin(&ctx);
 }
@@ -813,9 +808,34 @@ void SystemAbstraction::onMouseButton(MouseButton mouseButton, ButtonEvent event
     nk_input_button(&ctx, NK_BUTTON_RIGHT, (int)x, (int)y, ((mouseButton == MOUSE_RIGHT_BUTTON) && (event == EVENT_DOWN)) ? 1 : 0 );
 }
 
-void SystemAbstraction::onKeyboard(ButtonEvent event,int key, int x, int y )
+void SystemAbstraction::onKey(ButtonEvent event, Key key, Mods mods, int x, int y )
 {
+    nk_input_key(&ctx, NK_KEY_DEL, ((key == KEY_DELETE) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_ENTER, ((key == KEY_ENTER) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_TAB, ((key == KEY_TAB) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_BACKSPACE, ((key == KEY_BACKSPACE) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_LEFT, ((key == KEY_LEFT) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_RIGHT, ((key == KEY_RIGHT) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_UP, ((key == KEY_UP) && (event == EVENT_DOWN)) ? 1 : 0 );
+    nk_input_key(&ctx, NK_KEY_DOWN, ((key == KEY_DOWN) && (event == EVENT_DOWN)) ? 1 : 0 );
 
+
+
+    if (mods == MOD_CONTROL)
+    {
+        nk_input_key(&ctx, NK_KEY_COPY, ((key == KEY_C) && (event == EVENT_DOWN)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_PASTE, ((key == KEY_V) && (event == EVENT_DOWN)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_CUT, ((key == KEY_X) && (event == EVENT_DOWN)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_CUT, ((key == KEY_E) && (event == EVENT_DOWN)) ? 1 : 0 );
+        nk_input_key(&ctx, NK_KEY_SHIFT, 1);
+    }
+    else
+    {
+        nk_input_key(&ctx, NK_KEY_COPY, 0);
+        nk_input_key(&ctx, NK_KEY_PASTE, 0);
+        nk_input_key(&ctx, NK_KEY_CUT, 0);
+        nk_input_key(&ctx, NK_KEY_SHIFT, 0);
+    }
 }
 
 void SystemAbstraction::onChar(unsigned int codepoint)

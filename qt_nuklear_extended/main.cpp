@@ -9,7 +9,6 @@
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 
-extern struct nk_context ctx;
 GLFWwindow *win;
 int window_width = 0;
 int window_height = 0;
@@ -73,34 +72,7 @@ void cursorPosCallback(GLFWwindow* win,double xpos, double ypos)
 
 void keyCallback(GLFWwindow *win,int key, int scancode, int action, int mods)
 {
-
-
-    nk_input_key(&ctx, NK_KEY_DEL, ((key == GLFW_KEY_DELETE) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_ENTER, ((key == GLFW_KEY_ENTER) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_TAB, ((key == GLFW_KEY_TAB) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_BACKSPACE, ((key == GLFW_KEY_BACKSPACE) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_LEFT, ((key == GLFW_KEY_LEFT) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_RIGHT, ((key == GLFW_KEY_RIGHT) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_UP, ((key == GLFW_KEY_UP) && (action == GLFW_PRESS)) ? 1 : 0 );
-    nk_input_key(&ctx, NK_KEY_DOWN, ((key == GLFW_KEY_DOWN) && (action == GLFW_PRESS)) ? 1 : 0 );
-
-
-    if (mods & GLFW_MOD_CONTROL)
-    {
-        nk_input_key(&ctx, NK_KEY_COPY, ((key == GLFW_KEY_C) && (action == GLFW_PRESS)) ? 1 : 0 );
-        nk_input_key(&ctx, NK_KEY_PASTE, ((key == GLFW_KEY_V) && (action == GLFW_PRESS)) ? 1 : 0 );
-        nk_input_key(&ctx, NK_KEY_CUT, ((key == GLFW_KEY_X) && (action == GLFW_PRESS)) ? 1 : 0 );
-        nk_input_key(&ctx, NK_KEY_CUT, ((key == GLFW_KEY_E) && (action == GLFW_PRESS)) ? 1 : 0 );
-        nk_input_key(&ctx, NK_KEY_SHIFT, 1);
-    }
-    else
-    {
-        nk_input_key(&ctx, NK_KEY_COPY, 0);
-        nk_input_key(&ctx, NK_KEY_PASTE, 0);
-        nk_input_key(&ctx, NK_KEY_CUT, 0);
-        nk_input_key(&ctx, NK_KEY_SHIFT, 0);
-    }
-
+    SystemAbstraction::onKey((SystemAbstraction::ButtonEvent)action, (SystemAbstraction::Key)key, (SystemAbstraction::Mods)mods, 0, 0);
 }
 
 void charCallback(GLFWwindow *win, unsigned int codepoint)
