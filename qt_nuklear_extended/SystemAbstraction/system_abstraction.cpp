@@ -488,6 +488,29 @@ static struct nk_image icon_load(const char *filename)
     return nk_image_id((int)tex);
 }
 
+static struct nk_image icon_load_from_memory(unsigned char *fileData, int fileSize)
+{
+    int x,y,n;
+    GLuint tex;
+    unsigned char *data = stbi_load_from_memory(fileData, fileSize, &x, &y, &n, 0);
+    if (!data)
+    {
+        printf("[SDL]: failed to load image");
+        exit(EXIT_FAILURE);
+    }
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    return nk_image_id((int)tex);
+}
+
 static void device_init(struct device *dev)
 {
     GLint status;
@@ -713,10 +736,18 @@ void SystemAbstraction::onInit(unsigned int fb_width, unsigned int fb_height)
             // e.g.: ctx->style.font.height = 20.
             nk_font_atlas_init_default(&atlas);
             nk_font_atlas_begin(&atlas);
-            media.font_14 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
-            media.font_18 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 18.0f, &cfg);
-            media.font_20 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 20.0f, &cfg);
-            media.font_22 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 22.0f, &cfg);
+
+//            media.font_14 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
+//            media.font_18 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 18.0f, &cfg);
+//            media.font_20 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 20.0f, &cfg);
+//            media.font_22 = nk_font_atlas_add_from_file(&atlas, "./data/extra_font/Roboto-Regular.ttf", 22.0f, &cfg);
+
+#           include "./data_headers/extra_font/Roboto-Regular.ttf.hpp"
+            media.font_14 = nk_font_atlas_add_from_memory(&atlas, Roboto_Regular, size_of_Roboto_Regular, 14.0f, &cfg);
+            media.font_18 = nk_font_atlas_add_from_memory(&atlas, Roboto_Regular, size_of_Roboto_Regular, 18.0f, &cfg);
+            media.font_20 = nk_font_atlas_add_from_memory(&atlas, Roboto_Regular, size_of_Roboto_Regular, 20.0f, &cfg);
+            media.font_22 = nk_font_atlas_add_from_memory(&atlas, Roboto_Regular, size_of_Roboto_Regular, 22.0f, &cfg);
+
             image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
             device_upload_atlas(&device, image, w, h);
             nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);
@@ -726,37 +757,116 @@ void SystemAbstraction::onInit(unsigned int fb_width, unsigned int fb_height)
 
     /* icons */
     glEnable(GL_TEXTURE_2D);
-    media.unchecked = icon_load("./data/icon/unchecked.png");
-    media.checked = icon_load("./data/icon/checked.png");
-    media.rocket = icon_load("./data/icon/rocket.png");
-    media.cloud = icon_load("./data/icon/cloud.png");
-    media.pen = icon_load("./data/icon/pen.png");
-    media.play = icon_load("./data/icon/play.png");
-    media.pause = icon_load("./data/icon/pause.png");
-    media.stop = icon_load("./data/icon/stop.png");
-    media.next =  icon_load("./data/icon/next.png");
-    media.prev =  icon_load("./data/icon/prev.png");
-    media.tools = icon_load("./data/icon/tools.png");
-    media.dir = icon_load("./data/icon/directory.png");
-    media.copy = icon_load("./data/icon/copy.png");
-    media.convert = icon_load("./data/icon/export.png");
-    media.del = icon_load("./data/icon/delete.png");
-    media.edit = icon_load("./data/icon/edit.png");
-    media.menu[0] = icon_load("./data/icon/home.png");
-    media.menu[1] = icon_load("./data/icon/phone.png");
-    media.menu[2] = icon_load("./data/icon/plane.png");
-    media.menu[3] = icon_load("./data/icon/wifi.png");
-    media.menu[4] = icon_load("./data/icon/settings.png");
-    media.menu[5] = icon_load("./data/icon/volume.png");
-
-    for (int i = 0; i < 9; ++i)
-    {
-        char buffer[256];
-        sprintf(buffer, "./data/images/image%d.png", (i+1));
-        media.images[i] = icon_load(buffer);
-    }
 
 
+    //    media.unchecked = icon_load("./data/icon/unchecked.png");
+    //    media.checked = icon_load("./data/icon/checked.png");
+    //    media.rocket = icon_load("./data/icon/rocket.png");
+    //    media.cloud = icon_load("./data/icon/cloud.png");
+    //    media.pen = icon_load("./data/icon/pen.png");
+    //    media.play = icon_load("./data/icon/play.png");
+    //    media.pause = icon_load("./data/icon/pause.png");
+    //    media.stop = icon_load("./data/icon/stop.png");
+    //    media.next =  icon_load("./data/icon/next.png");
+    //    media.prev =  icon_load("./data/icon/prev.png");
+    //    media.tools = icon_load("./data/icon/tools.png");
+    //    media.dir = icon_load("./data/icon/directory.png");
+    //    media.copy = icon_load("./data/icon/copy.png");
+    //    media.convert = icon_load("./data/icon/export.png");
+    //    media.del = icon_load("./data/icon/delete.png");
+    //    media.edit = icon_load("./data/icon/edit.png");
+    //    media.menu[0] = icon_load("./data/icon/home.png");
+    //    media.menu[1] = icon_load("./data/icon/phone.png");
+    //    media.menu[2] = icon_load("./data/icon/plane.png");
+    //    media.menu[3] = icon_load("./data/icon/wifi.png");
+    //    media.menu[4] = icon_load("./data/icon/settings.png");
+    //    media.menu[5] = icon_load("./data/icon/volume.png");
+
+#include "./data_headers/icon/unchecked.png.hpp"
+#include "./data_headers/icon/checked.png.hpp"
+#include "./data_headers/icon/rocket.png.hpp"
+#include "./data_headers/icon/cloud.png.hpp"
+#include "./data_headers/icon/pen.png.hpp"
+#include "./data_headers/icon/play.png.hpp"
+#include "./data_headers/icon/pause.png.hpp"
+#include "./data_headers/icon/stop.png.hpp"
+#include "./data_headers/icon/next.png.hpp"
+#include "./data_headers/icon/prev.png.hpp"
+#include "./data_headers/icon/tools.png.hpp"
+#include "./data_headers/icon/directory.png.hpp"
+#include "./data_headers/icon/copy.png.hpp"
+#include "./data_headers/icon/export.png.hpp"
+#include "./data_headers/icon/delete.png.hpp"
+#include "./data_headers/icon/edit.png.hpp"
+#include "./data_headers/icon/home.png.hpp"
+#include "./data_headers/icon/phone.png.hpp"
+#include "./data_headers/icon/plane.png.hpp"
+#include "./data_headers/icon/wifi.png.hpp"
+#include "./data_headers/icon/settings.png.hpp"
+#include "./data_headers/icon/volume.png.hpp"
+
+    media.unchecked = icon_load_from_memory(unchecked,size_of_unchecked);
+    media.checked = icon_load_from_memory(checked,size_of_checked);
+    media.rocket = icon_load_from_memory(rocket,size_of_rocket);
+    media.cloud = icon_load_from_memory(cloud,size_of_cloud);
+    media.pen = icon_load_from_memory(pen,size_of_pen);
+    media.play = icon_load_from_memory(play,size_of_play);
+    media.pause = icon_load_from_memory(pause,size_of_pause);
+    media.stop = icon_load_from_memory(stop,size_of_stop);
+    media.next =  icon_load_from_memory(next,size_of_next);
+    media.prev =  icon_load_from_memory(prev,size_of_prev);
+    media.tools = icon_load_from_memory(tools,size_of_tools);
+    media.dir = icon_load_from_memory(directory,size_of_directory);
+    media.copy = icon_load_from_memory(copy,size_of_copy);
+    media.convert = icon_load_from_memory(export_png,size_of_export_png);
+    media.del = icon_load_from_memory(delete_png,size_of_delete_png);
+    media.edit = icon_load_from_memory(edit,size_of_edit);
+    media.menu[0] = icon_load_from_memory(home,size_of_home);
+    media.menu[1] = icon_load_from_memory(phone,size_of_phone);
+    media.menu[2] = icon_load_from_memory(plane,size_of_plane);
+    media.menu[3] = icon_load_from_memory(wifi,size_of_wifi);
+    media.menu[4] = icon_load_from_memory(settings,size_of_settings);
+    media.menu[5] = icon_load_from_memory(volume,size_of_volume);
+
+
+    //    for (int i = 0; i < 9; ++i)
+    //    {
+    //        char buffer[256];
+    //        sprintf(buffer, "./data/images/image%d.png", (i+1));
+    //        media.images[i] = icon_load(buffer);
+    //    }
+
+
+//    media.images[1] = icon_load("./data/images/image1.png");
+//    media.images[2] = icon_load("./data/images/image2.png");
+//    media.images[3] = icon_load("./data/images/image3.png");
+//    media.images[4] = icon_load("./data/images/image4.png");
+//    media.images[5] = icon_load("./data/images/image5.png");
+//    media.images[6] = icon_load("./data/images/image6.png");
+//    media.images[7] = icon_load("./data/images/image7.png");
+//    media.images[8] = icon_load("./data/images/image8.png");
+//    media.images[9] = icon_load("./data/images/image9.png");
+
+
+#include "./data_headers/images/image1.png.hpp"
+#include "./data_headers/images/image2.png.hpp"
+#include "./data_headers/images/image3.png.hpp"
+#include "./data_headers/images/image4.png.hpp"
+#include "./data_headers/images/image5.png.hpp"
+#include "./data_headers/images/image6.png.hpp"
+#include "./data_headers/images/image7.png.hpp"
+#include "./data_headers/images/image8.png.hpp"
+#include "./data_headers/images/image9.png.hpp"
+
+    media.images[0] = icon_load_from_memory(image1, size_of_image1);
+    media.images[1] = icon_load_from_memory(image2, size_of_image2);
+    media.images[2] = icon_load_from_memory(image3, size_of_image3);
+    media.images[3] = icon_load_from_memory(image4, size_of_image4);
+    media.images[4] = icon_load_from_memory(image5, size_of_image5);
+    media.images[5] = icon_load_from_memory(image6, size_of_image6);
+    media.images[6] = icon_load_from_memory(image7, size_of_image7);
+    media.images[7] = icon_load_from_memory(image8, size_of_image8);
+    media.images[8] = icon_load_from_memory(image9, size_of_image9);
 }
 
 void SystemAbstraction::onPause()
