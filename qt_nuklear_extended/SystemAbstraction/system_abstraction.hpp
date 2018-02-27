@@ -195,4 +195,8 @@ public:
     static void onPointerMove(int pointerId, const struct PointerCoords *coords);
     static void onTimerTick();
     static void onUninit();
+
+private:
+    static int framebuffer_width;
+    static int framebuffer_height;
 };

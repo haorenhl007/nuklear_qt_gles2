@@ -691,14 +691,15 @@ struct nk_font_atlas atlas;
 struct media media;
 struct nk_context ctx;
 
+int SystemAbstraction::framebuffer_width = 0;
+int SystemAbstraction::framebuffer_height = 0;
 
-extern int framebuffer_width;
-extern int framebuffer_height;
-
-void SystemAbstraction::onInit(unsigned int width, unsigned int height)
+void SystemAbstraction::onInit(unsigned int fb_width, unsigned int fb_height)
 {
+    framebuffer_width = fb_width;
+    framebuffer_height = fb_height;
     /* OpenGL */
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, fb_width, fb_height);
 
 
     {/* GUI */
@@ -770,7 +771,8 @@ void SystemAbstraction::onResume()
 
 void SystemAbstraction::onFramebufferResize(unsigned int width, unsigned int height)
 {
-
+    framebuffer_width = width;
+    framebuffer_height = height;
 }
 
 void SystemAbstraction::onRenderFirstFrame()
