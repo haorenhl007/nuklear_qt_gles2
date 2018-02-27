@@ -1,8 +1,16 @@
-#define NK_IMPLEMENTATION
 #include "system_abstraction.hpp"
 
+#define NK_IMPLEMENTATION
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#include "./Application/libs/nuklear/nuklear.h"
+
 #define STB_IMAGE_IMPLEMENTATION
-#include "./SystemAbstraction/Application/libs/stb/stb_image.h"
+#include "./Application/libs/stb/stb_image.h"
 
 #include <GLES2/gl2.h>
 

@@ -14,7 +14,8 @@ int window_width = 0;
 int window_height = 0;
 int framebuffer_width=0;
 int framebuffer_height=0;
-struct nk_vec2 scale;
+float scale_x;
+float scale_y;
 
 
 static void error_callback(int e, const char *d)
@@ -27,8 +28,8 @@ void mouseButtonCallback(GLFWwindow* win,int button, int action, int mods)
     double x, y;
     glfwGetCursorPos(win, &x, &y);
 
-    x = x*scale.x;
-    y = y*scale.y;
+    x = x*scale_x;
+    y = y*scale_y;
 
     if(action == GLFW_PRESS)
     {
@@ -65,8 +66,8 @@ void mouseButtonCallback(GLFWwindow* win,int button, int action, int mods)
 void cursorPosCallback(GLFWwindow* win,double xpos, double ypos)
 {
     PointerCoords coords;
-    coords.x = xpos*scale.x;
-    coords.y = ypos*scale.y;
+    coords.x = xpos*scale_x;
+    coords.y = ypos*scale_y;
     SystemAbstraction::onPointerMove(0, &coords);
 }
 
@@ -82,14 +83,14 @@ void charCallback(GLFWwindow *win, unsigned int codepoint)
 
 static void scrollCallback(GLFWwindow *win, double, double yoff)
 {
-    yoff = yoff*scale.y;
+    yoff = yoff*scale_y;
     SystemAbstraction::onScroll(yoff);
 }
 
 static void framebufferSizeCallback(GLFWwindow* win,int width,int height)
 {
-    width = width*scale.x;
-    height = height*scale.y;
+    width = width*scale_x;
+    height = height*scale_y;
     SystemAbstraction::onFramebufferResize(width, height);
 }
 
@@ -120,8 +121,8 @@ int main(int argc, char *argv[])
     glfwGetWindowSize(win, &window_width, &window_height);
     glfwGetFramebufferSize(win, &framebuffer_width, &framebuffer_height);
 
-    scale.x = (float)framebuffer_width/(float)window_width;
-    scale.y = (float)framebuffer_height/(float)window_height;
+    scale_x = (float)framebuffer_width/(float)window_width;
+    scale_y = (float)framebuffer_height/(float)window_height;
 
     SystemAbstraction::onInit(framebuffer_width, framebuffer_height);
 
