@@ -21,10 +21,10 @@ void SystemAbstraction::onResume()
 
 }
 
-void SystemAbstraction::onFramebufferResize(unsigned int width, unsigned int height)
+void SystemAbstraction::onFramebufferResize(unsigned int fb_width, unsigned int fb_height)
 {
-    framebuffer_width = width;
-    framebuffer_height = height;
+    framebuffer_width = fb_width;
+    framebuffer_height = fb_height;
 }
 
 void SystemAbstraction::onRenderFirstFrame()

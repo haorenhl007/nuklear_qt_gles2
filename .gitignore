@@ -7,3 +7,4 @@ Błąd-*/
 .~lock.
 .~lock.*.odt#
 *.odt#
+CMakeLists.txt.user
