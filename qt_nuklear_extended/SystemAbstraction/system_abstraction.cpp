@@ -34,6 +34,11 @@ void SystemAbstraction::onRenderFirstFrame()
 
 void SystemAbstraction::onRenderFrame()
 {
+    /* Draw */
+    glViewport(0, 0, framebuffer_width, framebuffer_height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+
     demo_render(framebuffer_width,framebuffer_height);
 }
 
